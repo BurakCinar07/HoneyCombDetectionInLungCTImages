@@ -45,7 +45,7 @@ def get_pixels_hu(scans):
 
     image += np.int16(intercept)
 
-    return np.array(image, dtype = np.int16)
+    return np.array(image, dtype=np.int16)
 
 
 patient_scans = load_scan(data_path)
@@ -54,6 +54,7 @@ imgs = get_pixels_hu(patient_scans)
 np.save(output_data, imgs)
 
 imgs_to_process = np.load(output_data)
+
 
 def resample(image, scan, new_spacing=[1, 1, 1]):
     # Determine current pixel spacing
@@ -70,7 +71,82 @@ def resample(image, scan, new_spacing=[1, 1, 1]):
 
     return image, new_spacing
 
+
+def make_lungmask(img, display=False):
+    row_size = img.shape[0]
+    col_size = img.shape[0]
+
+    mean = np.mean(img)
+    std = np.std(img)
+    img = img - mean
+    img = img / std
+
+    middle = img[int(col_size / 5):int(col_size / 5 * 4), int(row_size / 5):int(row_size / 5 * 4)]
+    mean = np.mean(middle)
+    max = np.max(img)
+    min = np.min(img)
+
+    img[img == max] = mean
+    img[img == min] = mean
+
+    kmeans = KMeans(n_clusters=2).fit(np.reshape(middle, [np.prod(middle.shape), 1]))
+    centers = sorted(kmeans.cluster_centers_.flatten())
+    threshold = np.mean(centers)
+    thresh_img = np.where(img < threshold, 1.0, 0.0)
+
+    eroded = morphology.erosion(thresh_img, np.ones([3, 3]))
+    dilation = morphology.dilation(eroded, np.ones([8, 8]))
+
+    labels = measure.label(dilation)
+    label_values = np.unique(labels)
+    regions = measure.regionprops(labels)
+    good_labels = []
+
+    for prop in regions:
+        B = prop.bbox
+        if B[2] - B[0] < row_size / 10 * 9 and B[3] - B[1] < col_size / 10 * 9 and B[0] > row_size / 5 and B[
+            2] < col_size / 5 * 4:
+            good_labels.append(prop.label)
+
+    mask = np.ndarray([row_size, col_size], dtype=np.int8)
+    mask[:] = 0
+
+    for N in good_labels:
+        mask = mask + np.where(labels == N, 1, 0)
+
+    mask = morphology.dilation(mask, np.ones([10, 10]))
+
+    if display:
+        fig, ax = plt.subplots(3, 2, figsize=[12, 12])
+        ax[0, 0].set_title("Original")
+        ax[0, 0].imshow(img, cmap='gray')
+        ax[0, 0].axis('off')
+        ax[0, 1].set_title("Threshold")
+        ax[0, 1].imshow(thresh_img, cmap='gray')
+        ax[0, 1].axis('off')
+        ax[1, 0].set_title("After Erosion and Dilation")
+        ax[1, 0].imshow(dilation, cmap='gray')
+        ax[1, 0].axis('off')
+        ax[1, 1].set_title("Color Labels")
+        ax[1, 1].imshow(labels)
+        ax[1, 1].axis('off')
+        ax[2, 0].set_title("Final Mask")
+        ax[2, 0].imshow(mask, cmap='gray')
+        ax[2, 0].axis('off')
+        ax[2, 1].set_title("Apply Mask on Original")
+        ax[2, 1].imshow(mask * img, cmap='gray')
+        ax[2, 1].axis('off')
+
+        plt.show()
+
+    return mask * img
+
+
 imgs_after_resampling, spacing = resample(imgs_to_process, patient_scans, [1, 1, 1])
 
-v, f = vh.make_mesh(imgs_after_resampling, 350)
+masked_lungs = []
 
+for img in imgs_after_resampling:
+    masked_lungs.append(make_lungmask(img, display=True))
+
+np.save("masked_lungs.npy", masked_lungs)

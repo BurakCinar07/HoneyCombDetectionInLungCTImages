@@ -10,8 +10,9 @@ from plotly.offline import download_plotlyjs, init_notebook_mode, plot, iplot
 from plotly.tools import FigureFactory as FF
 from plotly.graph_objs import *
 
+
 #    Function to show slices
-def sample_stack(stack, rows=2, cols=2, start_with=2, show_every=3):
+def sample_stack(stack, rows=2, cols=2, start_with=10, show_every=3):
     fig,ax = plt.subplots(rows,cols,figsize=[12,12])
     for i in range(rows*cols):
         ind = start_with + i*show_every

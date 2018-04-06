@@ -4,3 +4,4 @@
 .idea/workspace.xml
 .idea/
 __pycache__/
+masked_lungs.npy
