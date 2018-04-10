@@ -55,11 +55,11 @@ np.save(output_data, imgs)
 
 imgs_to_process = np.load(output_data)
 
-
+#this process is important mention it on your report.
 def resample(image, scan, new_spacing=[1, 1, 1]):
     # Determine current pixel spacing
-    spacing = map(float, ([scan[0].SliceThickness] + list(scan[0].PixelSpacing)))
-    spacing = np.array(list(spacing))
+    spacing = np.array([scan[0].SliceThickness] + list(scan[0].PixelSpacing), dtype=np.float32)
+
 
     resize_factor = spacing / new_spacing
     new_real_shape = image.shape * resize_factor
@@ -67,7 +67,7 @@ def resample(image, scan, new_spacing=[1, 1, 1]):
     real_resize_factor = new_shape / image.shape
     new_spacing = spacing / real_resize_factor
 
-    image = scipy.ndimage.interpolation.zoom(image, real_resize_factor)
+    image = scipy.ndimage.interpolation.zoom(image, real_resize_factor, mode='nearest')
 
     return image, new_spacing
 
@@ -144,9 +144,12 @@ def make_lungmask(img, display=False):
 
 imgs_after_resampling, spacing = resample(imgs_to_process, patient_scans, [1, 1, 1])
 
+make_lungmask(imgs_after_resampling[150], display=True)
+
+
+"""
 masked_lungs = []
 
 for img in imgs_after_resampling:
     masked_lungs.append(make_lungmask(img, display=True))
-
-np.save("masked_lungs.npy", masked_lungs)
+"""

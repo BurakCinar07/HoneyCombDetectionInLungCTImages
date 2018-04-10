@@ -72,5 +72,6 @@ def plt_3d(verts, faces):
     ax.set_xlim(0, max(x))
     ax.set_ylim(0, max(y))
     ax.set_zlim(0, max(z))
-    ax.set_axis_bgcolor((0.7, 0.7, 0.7))
+    ax.set_facecolor('b')
     plt.show()
+
