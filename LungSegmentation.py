@@ -10,11 +10,6 @@ from sklearn.cluster import KMeans
 from mpl_toolkits.mplot3d.art3d import Poly3DCollection
 import os
 from glob import glob
-import VisualizationHelper as vh
-
-data_path = "C:\\Users\\burak\\Desktop\\New folder\\"
-output_data = "images.npy"
-g = glob(data_path + '/*.dcm')
 
 
 def load_scan(path):
@@ -44,23 +39,14 @@ def get_pixels_hu(scans):
         image = (slope * image.astype(np.float64)).astype(np.int16)
 
     image += np.int16(intercept)
-
     return np.array(image, dtype=np.int16)
 
 
-patient_scans = load_scan(data_path)
-imgs = get_pixels_hu(patient_scans)
-
-np.save(output_data, imgs)
-
-imgs_to_process = np.load(output_data)
 
 #this process is important mention it on your report.
 def resample(image, scan, new_spacing=[1, 1, 1]):
     # Determine current pixel spacing
     spacing = np.array([scan[0].SliceThickness] + list(scan[0].PixelSpacing), dtype=np.float32)
-
-
     resize_factor = spacing / new_spacing
     new_real_shape = image.shape * resize_factor
     new_shape = np.round(new_real_shape)
@@ -71,7 +57,7 @@ def resample(image, scan, new_spacing=[1, 1, 1]):
 
     return image, new_spacing
 
-
+#This method has %17 loss rate.
 def make_lungmask(img, display=False):
     row_size = img.shape[0]
     col_size = img.shape[0]
@@ -142,10 +128,57 @@ def make_lungmask(img, display=False):
     return mask * img
 
 
-imgs_after_resampling, spacing = resample(imgs_to_process, patient_scans, [1, 1, 1])
+#imgs_after_resampling, spacing = resample(imgs_to_process, patient_scans, [1, 1, 1])
 
-make_lungmask(imgs_after_resampling[150], display=True)
+def largest_label_volume(im, bg=-1):
+    vals, counts = np.unique(im, return_counts=True)
 
+    counts = counts[vals != bg]
+    vals = vals[vals != bg]
+
+    if len(counts) > 0:
+        return vals[np.argmax(counts)]
+    else:
+        return None
+
+#This method has %11 loss rate
+def segment_lung_mask(image, fill_lung_structures=True):
+    # not actually binary, but 1 and 2.
+    # 0 is treated as background, which we do not want
+    binary_image = np.array(image > -320, dtype=np.int8) + 1
+    labels = measure.label(binary_image)
+
+    # Pick the pixel in the very corner to determine which label is air.
+    #   Improvement: Pick multiple background labels from around the patient
+    #   More resistant to "trays" on which the patient lays cutting the air
+    #   around the person in half
+    background_label = labels[0, 0, 0]
+
+    # Fill the air around the person
+    binary_image[background_label == labels] = 2
+
+    # Method of filling the lung structures (that is superior to something like
+    # morphological closing)
+    if fill_lung_structures:
+        # For every slice we determine the largest solid structure
+        for i, axial_slice in enumerate(binary_image):
+            axial_slice = axial_slice - 1
+            labeling = measure.label(axial_slice)
+            l_max = largest_label_volume(labeling, bg=0)
+
+            if l_max is not None:  # This slice contains some lung
+                binary_image[i][labeling != l_max] = 1
+
+    binary_image -= 1  # Make the image actual binary
+    binary_image = 1 - binary_image  # Invert it, lungs are now 1
+
+    # Remove other air pockets insided body
+    labels = measure.label(binary_image, background=0)
+    l_max = largest_label_volume(labels, bg=0)
+    if l_max is not None:  # There are air pockets
+        binary_image[labels != l_max] = 0
+
+    return binary_image
 
 """
 masked_lungs = []

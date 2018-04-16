@@ -11,6 +11,10 @@ from plotly.tools import FigureFactory as FF
 from plotly.graph_objs import *
 
 
+def plot_slice(img):
+    plt.imshow(img, cmap='gray')
+    plt.show()
+
 #    Function to show slices
 def sample_stack(stack, rows=2, cols=2, start_with=10, show_every=3):
     fig,ax = plt.subplots(rows,cols,figsize=[12,12])
