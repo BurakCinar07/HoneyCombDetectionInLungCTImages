@@ -107,7 +107,8 @@ def segment_lung_mask(image, fill_lung_structures=True):
 
     binary_image -= 1  # Make the image actual binary
     binary_image = 1 - binary_image  # Invert it, lungs are now 1
-
+    #Remove areas under the lungs to fix some edge cases.
+    binary_image[:, 480:, :] = 0
     # Remove other air pockets insided body
     labels = measure.label(binary_image, background=0)
     l_max = largest_label_volume(labels, bg=0)
