@@ -16,7 +16,7 @@ def plot_slice(img):
     plt.show()
 
 #    Function to show slices
-def sample_stack(stack, rows=2, cols=2, start_with=10, show_every=3):
+def sample_stack(stack, rows=2, cols=2, start_with=29, show_every=3):
     fig,ax = plt.subplots(rows,cols,figsize=[12,12])
     for i in range(rows*cols):
         ind = start_with + i*show_every

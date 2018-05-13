@@ -1,10 +1,8 @@
 import LungSegmentation as LS
 import nibabel
-from glob import glob
 import numpy as np
 import VisualizationHelper as VH
 import codecs, json
-import scipy
 from scipy.ndimage import morphology
 
 DATASET_OUTPUT_PATH = "C:\\Users\\burak\\PycharmProjects\\Bitirme\\dataset\\data_set.json"
@@ -16,24 +14,7 @@ p2_dicom_path = "C:\\Users\\burak\\Desktop\\Bitirme\\Kaynaklar\\scans\\scans\\Ad
 p3_nifti_path = "C:\\Users\\burak\\Desktop\\Bitirme\\Kaynaklar\\isaretlemeler\\jakvalid.nii"
 p3_dicom_path = "C:\\Users\\burak\\Desktop\\Bitirme\\Kaynaklar\\scans\\scans\\Jak Valid Sevindiren\\DICOM\\S00001\\SER00002"
 
-test_dicom = "C:\\Users\\burak\\Desktop\\Bitirme\\Kaynaklar\\scans\\scans\\Adem Ünal\\DICOM\\ST000000\\SE000005\\"
-
-
-
 dataset = []
-loss = np.zeros(2)
-def crop_lung(img, row, col, label):
-    cropped = np.zeros((3,3), dtype=np.float)
-    if(img[row][col] == 0.):
-        loss[0] += 1
-
-    loss[1] += 1
-    print(loss[0], loss[1])
-    #dataset.append({
-    #    'image': cropped.tolist(),
-    #    'label': label
-    #})
-
 
 def generate_dataset(nifti_path, dicom_path):
     labeled_imgs = np.array(nibabel.load(nifti_path).get_data())
@@ -41,13 +22,30 @@ def generate_dataset(nifti_path, dicom_path):
     non_labeled_imgs = LS.load_scan(dicom_path)
     hu_value_imgs = LS.get_pixels_hu(non_labeled_imgs)[::-1]
     non_labeled_imgs = non_labeled_imgs[::-1]
-
-    ref_img = non_labeled_imgs[0]
+    #ref_img = non_labeled_imgs[0]
     #resampled_imgs, spacing = LS.resample(hu_value_imgs, ref_img)
     #resampled_labeled_imgs = LS.resample_nifti(labeled_imgs, ref_img)
-    segmented_lungs = LS.segment_lung_mask(hu_value_imgs)
-    for i in segmented_lungs:
-        VH.plot_slice(i)
+    #segmented_lungs = LS.segment_lung_mask(hu_value_imgs)
+
+    binary_labeled_imgs = []
+    for i in labeled_imgs:
+        i[i == 2] = 1
+        i[i == 3] = 1
+        binary_labeled_imgs.append(i)
+
+    binary_masks = LS.segment_lung_mask(hu_value_imgs)
+    VH.plot_slice(binary_masks[29])
+    binary_masks_with_veins = LS.segment_lung_mask(hu_value_imgs, fill_lung_structures=False)
+    VH.plot_slice(binary_masks_with_veins[29])
+    VH.plot_slice(binary_masks[29] - binary_masks_with_veins[29])
+    VH.plot_slice(hu_value_imgs[29] * binary_masks_with_veins[29])
+    dices = []
+    for i in range(24,48):
+        dice_metrix = LS.dice_metric_coeffecient(binary_labeled_imgs[i], binary_masks[i])
+        dices.append(dice_metrix)
+        print(dice_metrix)
+
+    print("Dice metrix average for patient:", sum(dices)/len(dices))
     #binary_masks = LS.segment_lung_mask(resampled_imgs)
     #binary_masks = morphology.binary_fill_holes(morphology.binary_dilation(morphology.binary_fill_holes(binary_masks > 0), iterations=4))
     #segmented_lungs = binary_masks * resampled_imgs
@@ -66,8 +64,6 @@ def generate_dataset(nifti_path, dicom_path):
                         crop_lung(image, i, j,label=3)
     """
 generate_dataset(p1_nifti_path, p1_dicom_path)
-
-generate_dataset(p2_nifti_path, p2_dicom_path)
-generate_dataset(p3_nifti_path, p3_dicom_path)
+#generate_dataset(p2_nifti_path, p2_dicom_path)
+#generate_dataset(p3_nifti_path, p3_dicom_path)
 #json.dump(dataset, codecs.open(DATASET_OUTPUT_PATH, 'w+', encoding='utf-8'), separators=(',', ':'), sort_keys=True, indent=4)
-print("Final loss", loss[0], loss[1], loss[0]/loss[1])
