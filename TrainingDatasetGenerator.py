@@ -43,15 +43,12 @@ def generate_dataset(nifti_path, dicom_path):
     non_labeled_imgs = non_labeled_imgs[::-1]
 
     ref_img = non_labeled_imgs[0]
-    #resampled_imgs, spacing = LS.resample(hu_value_imgs, ref_img)
-    #resampled_labeled_imgs = LS.resample_nifti(labeled_imgs, ref_img)
-    segmented_lungs = LS.segment_lung_mask(hu_value_imgs)
-    for i in segmented_lungs:
-        VH.plot_slice(i)
-    #binary_masks = LS.segment_lung_mask(resampled_imgs)
-    #binary_masks = morphology.binary_fill_holes(morphology.binary_dilation(morphology.binary_fill_holes(binary_masks > 0), iterations=4))
-    #segmented_lungs = binary_masks * resampled_imgs
-    """
+    resampled_imgs, spacing = LS.resample(hu_value_imgs, ref_img)
+    resampled_labeled_imgs = LS.resample_nifti(labeled_imgs, ref_img)
+
+    binary_masks = LS.segment_lung_mask(resampled_imgs)
+    segmented_lungs = binary_masks * resampled_imgs
+
     for k in range(len(segmented_lungs)):
         image = segmented_lungs[k]
         labeled_img = resampled_labeled_imgs[k]
@@ -64,7 +61,7 @@ def generate_dataset(nifti_path, dicom_path):
                         crop_lung(image, i, j,label=2)
                     elif labeled_img[i][j] == 3:
                         crop_lung(image, i, j,label=3)
-    """
+    
 generate_dataset(p1_nifti_path, p1_dicom_path)
 
 generate_dataset(p2_nifti_path, p2_dicom_path)
