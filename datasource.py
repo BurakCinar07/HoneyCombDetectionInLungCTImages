@@ -26,8 +26,27 @@ def training_batch_generator(batch_size):
             elif training_row['label'] == '3':
                 labels.append([0, 0, 1])
 
-        yield batch_index, images, labels
+        yield batch_index, np.array(images), np.array(labels)
 
+
+def test_batch_generator(batch_size):
+    test_data = json.load(open(TEST_JSON, "r"))
+
+    for batch_index in range(int(len(test_data) / batch_size)):
+        images = []
+        labels = []
+
+        for test_row in test_data[batch_index * batch_size:(batch_index + 1) * batch_size]:
+            img = np.loadtxt(test_row['image_path'])
+            images.append(img)
+            if test_row['label'] == '1':
+                labels.append([1, 0, 0])
+            elif test_row['label'] == '2':
+                labels.append([0, 1, 0])
+            elif test_row['label'] == '3':
+                labels.append([0, 0, 1])
+
+        yield batch_index, np.array(images), np.array(labels)
 
 def generate_train_test_dataset():
 
@@ -54,9 +73,8 @@ def generate_train_test_dataset():
 
 
 def main():
-    generate_train_test_dataset()
-    #for batch_index, batch_imgs, batch_labels in training_batch_generator(20):
-    #    print(batch_imgs)
+    for batch_index, batch_imgs, batch_labels in test_batch_generator(20):
+        print(batch_imgs)
 
 if __name__ == '__main__':
     main()
