@@ -5,8 +5,6 @@ import os
 import scipy.ndimage
 from skimage import measure
 
-MIN_BOUND = -1000.0
-MAX_BOUND = 400.0
 
 
 def load_scan(path):
@@ -49,7 +47,7 @@ def resample(image, ref_img, new_spacing=[1, 1, 1]):
     real_resize_factor = new_shape / image.shape
     new_spacing = spacing / real_resize_factor
 
-    image = scipy.ndimage.interpolation.zoom(image, real_resize_factor, mode='nearest')
+    image = scipy.ndimage.interpolation.zoom(image, real_resize_factor, order=0)
     return image, new_spacing
 
 
@@ -60,7 +58,7 @@ def resample_nifti(images, ref_img, new_spacing=[1,1,1]):
     new_shape = np.round(new_real_shape)
     real_resize_factor = new_shape / images.shape
     new_spacing = spacing / real_resize_factor
-    return scipy.ndimage.interpolation.zoom(images, real_resize_factor, mode='nearest')
+    return scipy.ndimage.interpolation.zoom(images, real_resize_factor, order=0)
 
 
 #imgs_after_resampling, spacing = resample(imgs_to_process, patient_scans, [1, 1, 1])
@@ -76,24 +74,16 @@ def largest_label_volume(im, bg=-1):
     else:
         return None
 
-#This method has %11 loss rate
 def segment_lung_mask(image, fill_lung_structures=True):
-    # not actually binary, but 1 and 2.
-    # 0 is treated as background, which we do not want
     binary_image = np.array(image > -320, dtype=np.int8) + 1
     labels = measure.label(binary_image)
 
-    # Pick the pixel in the very corner to determine which label is air.
-    #   Improvement: Pick multiple background labels from around the patient
-    #   More resistant to "trays" on which the patient lays cutting the air
-    #   around the person in half
     background_label = labels[0, 0, 0]
 
     # Fill the air around the person
     binary_image[background_label == labels] = 2
 
-    # Method of filling the lung structures (that is superior to something like
-    # morphological closing)
+    # Method of filling the lung structures
     if fill_lung_structures:
         # For every slice we determine the largest solid structure
         for i, axial_slice in enumerate(binary_image):
@@ -117,11 +107,6 @@ def segment_lung_mask(image, fill_lung_structures=True):
     return binary_image
 
 
-def normalize(image):
-    image = (image - MIN_BOUND) / (MAX_BOUND - MIN_BOUND)
-    image[image > 1] = 1.
-    image[image < 0] = 0.
-    return image
 
 
 def dice_metric_coeffecient(im1, im2, empty_score=1.0):

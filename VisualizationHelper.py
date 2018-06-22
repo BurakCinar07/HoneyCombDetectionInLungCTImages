@@ -9,11 +9,12 @@ from plotly import __version__
 from plotly.offline import download_plotlyjs, init_notebook_mode, plot, iplot
 from plotly.tools import FigureFactory as FF
 from plotly.graph_objs import *
-
+from PIL import Image
 
 def plot_slice(img):
     plt.imshow(img, cmap='gray')
     plt.show()
+
 
 #    Function to show slices
 def sample_stack(stack, rows=2, cols=2, start_with=29, show_every=3):
